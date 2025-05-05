@@ -21,7 +21,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/messages", async (req, res) => {
-  const messages = await Message.find().sort({ timestamp: 1 }).limit(50);
+  const messages = await Message.find().sort({ timestamp: 1 }).limit(4);
   res.json(messages);
 });
 
