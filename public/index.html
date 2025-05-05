@@ -7,75 +7,248 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <header class="title">
-      <h1>Welcome to Chat App</h1>
-    </header>
+    <div class="app-container">
+      <header class="header">
+        <h1>Chat Bubble</h1>
+        <div class="online-indicator">
+          <div class="online-dot"></div>
+          <span id="online-status">Online</span>
+        </div>
+      </header>
 
-    <main class="container" id="chatContainer"></main>
+      <main id="chatContainer">
+        <div class="empty-state">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+          </svg>
+          <h3>No messages yet</h3>
+          <p>Start the conversation by sending a message!</p>
+        </div>
+      </main>
 
-    <div class="input-container">
-      <form id="chat-form">
-        <input
-          type="text"
-          placeholder="Enter your message here..."
-          id="messageInput"
-          required
-          autocomplete="off"
-        />
-        <button type="submit">Send</button>
-      </form>
+      <div class="input-container">
+        <form id="chat-form">
+          <input
+            type="text"
+            placeholder="Type your message..."
+            id="messageInput"
+            required
+            autocomplete="off"
+          />
+          <button type="submit" aria-label="Send message">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+              />
+            </svg>
+          </button>
+        </form>
+      </div>
+
+      <div class="username-prompt">
+        <div class="username-card">
+          <h2>Welcome to Chat Bubble</h2>
+          <p>Please enter your name to join the conversation</p>
+          <input
+            type="text"
+            id="usernameInput"
+            placeholder="Your name"
+            maxlength="15"
+          />
+          <button id="joinChat">Join Chat</button>
+        </div>
+      </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
       const socket = io();
       let currentSocketId = null;
+      let username = "";
       const form = document.getElementById("chat-form");
       const msgInput = document.getElementById("messageInput");
       const container = document.getElementById("chatContainer");
+      let userCount = 0;
 
+      // Handle connection status
       socket.on("connect", () => {
         currentSocketId = socket.id;
+        document.getElementById("online-status").textContent = "Online";
+        document.querySelector(".online-dot").style.backgroundColor = "#4caf50";
       });
 
+      socket.on("disconnect", () => {
+        document.getElementById("online-status").textContent = "Offline";
+        document.querySelector(".online-dot").style.backgroundColor = "#f44336";
+      });
+
+      // Handle user count updates
+      socket.on("user_count", (count) => {
+        userCount = count;
+        document.getElementById(
+          "online-status"
+        ).textContent = `${userCount} online`;
+      });
+
+      // Join chat functionality
+      document.getElementById("joinChat").onclick = () => {
+        const input = document.getElementById("usernameInput");
+        username = input.value.trim();
+
+        if (username) {
+          document.querySelector(".username-prompt").style.display = "none";
+          document.getElementById("chatContainer").style.display = "block";
+
+          // Clear any empty state
+          if (document.querySelector(".empty-state")) {
+            document.querySelector(".empty-state").style.display = "none";
+          }
+
+          // Let others know you joined
+          socket.emit("user_joined", { username });
+
+          // Focus the message input
+          msgInput.focus();
+
+          // Fetch existing messages
+          fetch("/messages")
+            .then((res) => res.json())
+            .then((messages) => {
+              if (messages.length > 0) {
+                // Clear empty state if it exists
+                if (document.querySelector(".empty-state")) {
+                  container.innerHTML = "";
+                }
+
+                messages.forEach((msg) => {
+                  const side = msg.username === username ? "right" : "left";
+                  displayChat(
+                    side,
+                    msg.text,
+                    msg.username,
+                    new Date(msg.timestamp)
+                  );
+                });
+
+                // Scroll to bottom
+                container.scrollTop = container.scrollHeight;
+              }
+            })
+            .catch((err) => {
+              console.error("Error fetching messages:", err);
+            });
+        }
+      };
+
+      // Handle pressing Enter on username input
+      document
+        .getElementById("usernameInput")
+        .addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            document.getElementById("joinChat").click();
+          }
+        });
+
+      // Send message functionality
       form.addEventListener("submit", (e) => {
         e.preventDefault();
         const message = msgInput.value.trim();
+
         if (message) {
           socket.emit("chat-message", {
             text: message,
+            username: username,
             senderId: currentSocketId,
           });
+
           msgInput.value = "";
+          msgInput.focus();
         }
       });
 
+      // Handle incoming messages
       socket.on("new_message", (msg) => {
-        const side = msg.senderId === currentSocketId ? "right" : "left";
-        displayChat(side, msg.text);
+        // Clear empty state if it exists
+        if (document.querySelector(".empty-state")) {
+          container.innerHTML = "";
+        }
+
+        const side = msg.username === username ? "right" : "left";
+        displayChat(side, msg.text, msg.username, new Date(msg.timestamp));
+
+        // Scroll to bottom
+        container.scrollTop = container.scrollHeight;
       });
 
-      function displayChat(side, msg) {
-        const time = new Date().toLocaleTimeString([], {
+      // Handle user join notifications
+      socket.on("user_joined_notification", (data) => {
+        if (data.username !== username) {
+          const joinElement = document.createElement("div");
+          joinElement.className = "join-notification";
+          joinElement.innerHTML = `
+            <div style="text-align: center; margin: 10px 0; color: #666; font-size: 0.85rem;">
+              ${data.username} has joined the chat
+            </div>
+          `;
+          container.appendChild(joinElement);
+          container.scrollTop = container.scrollHeight;
+        }
+      });
+
+      // Function to display chat messages
+      function displayChat(side, text, sender, timestamp = new Date()) {
+        const messageBox = document.createElement("div");
+        messageBox.className = `message message-${side}`;
+
+        const messageInfo = document.createElement("div");
+        messageInfo.className = "message-info";
+
+        if (side === "left") {
+          const usernameDisplay = document.createElement("span");
+          usernameDisplay.className = "username-display";
+          usernameDisplay.textContent = sender;
+          messageInfo.appendChild(usernameDisplay);
+        }
+
+        messageBox.appendChild(messageInfo);
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = text;
+        messageBox.appendChild(bubble);
+
+        const timestampElem = document.createElement("span");
+        timestampElem.className = "timestamp";
+
+        // Format timestamp
+        const timeStr = timestamp.toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         });
 
-        const messageBox = document.createElement("div");
-        messageBox.className = `message message-${side}`;
+        timestampElem.textContent = timeStr;
+        messageBox.appendChild(timestampElem);
 
-        const bubble = document.createElement("div");
-        bubble.className = "bubble";
-        bubble.textContent = msg;
-
-        const timestamp = document.createElement("span");
-        timestamp.className = "timestamp";
-        timestamp.textContent = time;
-
-        messageBox.appendChild(bubble);
-        messageBox.appendChild(timestamp);
         container.appendChild(messageBox);
-        container.scrollTop = container.scrollHeight;
       }
     </script>
   </body>
