@@ -1,0 +1,103 @@
+body {
+  background: url("whatsapp_bg_img.jpeg");
+  min-height: 100vh;
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.title {
+  text-align: center;
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+h1 {
+  color: #0d7ee0;
+  font-family: "Courier New", Courier, monospace;
+}
+
+.container {
+  flex: 1;
+  padding: 1em;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+}
+
+.message-left {
+  align-self: flex-start;
+}
+
+.message-right {
+  align-self: flex-end;
+}
+
+.bubble {
+  padding: 10px;
+  border-radius: 12px;
+  background-color: #0d7ee0;
+  color: white;
+  font-size: 1rem;
+  word-wrap: break-word;
+}
+
+.message-left .bubble {
+  background-color: #272619;
+}
+
+.timestamp {
+  font-size: 0.75rem;
+  margin-top: 2px;
+  color: #db0f0f;
+  align-self: flex-end;
+}
+
+.input-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  padding: 0.5em 1em;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+#chat-form {
+  display: flex;
+  gap: 0.5em;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#messageInput {
+  flex: 1;
+  padding: 0.75em;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+#chat-form button {
+  padding: 0.75em 1.25em;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+#chat-form button:hover {
+  background-color: #218838;
+}

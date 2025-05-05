@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Real-time Chat App</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="title">
+      <h1>Welcome to Chat App</h1>
+    </header>
+
+    <main class="container" id="chatContainer"></main>
+
+    <div class="input-container">
+      <form id="chat-form">
+        <input
+          type="text"
+          placeholder="Enter your message here..."
+          id="messageInput"
+          required
+          autocomplete="off"
+        />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      let currentSocketId = null;
+      const form = document.getElementById("chat-form");
+      const msgInput = document.getElementById("messageInput");
+      const container = document.getElementById("chatContainer");
+
+      socket.on("connect", () => {
+        currentSocketId = socket.id;
+      });
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const message = msgInput.value.trim();
+        if (message) {
+          socket.emit("chat-message", {
+            text: message,
+            senderId: currentSocketId,
+          });
+          msgInput.value = "";
+        }
+      });
+
+      socket.on("new_message", (msg) => {
+        const side = msg.senderId === currentSocketId ? "right" : "left";
+        displayChat(side, msg.text);
+      });
+
+      function displayChat(side, msg) {
+        const time = new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        const messageBox = document.createElement("div");
+        messageBox.className = `message message-${side}`;
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = msg;
+
+        const timestamp = document.createElement("span");
+        timestamp.className = "timestamp";
+        timestamp.textContent = time;
+
+        messageBox.appendChild(bubble);
+        messageBox.appendChild(timestamp);
+        container.appendChild(messageBox);
+        container.scrollTop = container.scrollHeight;
+      }
+    </script>
+  </body>
+</html>
